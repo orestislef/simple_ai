@@ -289,6 +289,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.clear();
       _chatContext.clear();
+      _handleSystemContext();
     });
   }
 
@@ -314,28 +315,19 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_systemContext.isEmpty) {
       return;
     }
+
+    final systemMessage = OpenAIChatCompletionChoiceMessageModel(
+      content: [
+        OpenAIChatCompletionChoiceMessageContentItemModel.text(_systemContext),
+      ],
+      role: OpenAIChatMessageRole.system,
+    );
+
     if (_chatContext.isEmpty) {
-      _chatContext.add(OpenAIChatCompletionChoiceMessageModel(
-        content: [
-          OpenAIChatCompletionChoiceMessageContentItemModel.text(
-            _systemContext,
-          ),
-        ],
-        role: OpenAIChatMessageRole.system,
-      ));
+      _chatContext.add(systemMessage);
     } else {
       _chatContext.removeWhere((e) => e.role == OpenAIChatMessageRole.system);
-      _chatContext.insert(
-        0,
-        OpenAIChatCompletionChoiceMessageModel(
-          content: [
-            OpenAIChatCompletionChoiceMessageContentItemModel.text(
-              _systemContext,
-            ),
-          ],
-          role: OpenAIChatMessageRole.system,
-        ),
-      );
+      _chatContext.insert(0, systemMessage);
     }
   }
 
