@@ -15,7 +15,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Chat App',
+      debugShowCheckedModeBanner: false,
+      title: 'Lef Chat',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -67,10 +68,10 @@ class _ChatScreenState extends State<ChatScreen> {
                         Container(
                           decoration: BoxDecoration(
                             color: isUser ? Colors.blue[200] : Colors.grey[200],
-                            boxShadow: const [
+                            boxShadow: [
                               BoxShadow(
                                 color: Colors.black26,
-                                offset: Offset(0, 2),
+                                offset: Offset(isUser ? 2 : -2, 2),
                                 blurRadius: 6.0,
                               ),
                             ],
@@ -98,31 +99,32 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           if (_isGenerating) const LinearProgressIndicator(),
           Padding(
-            padding:
-                const EdgeInsets.only(bottom: 4.0, left: 10.0, right: 10.0),
-            child: TextFormField(
-              minLines: 1,
-              maxLines: 3,
-              onTapOutside: (event) {
-                FocusScope.of(context).unfocus();
-              },
-              controller: _messageController,
-              enabled: !_isGenerating,
-              decoration: InputDecoration(
-                hintText: 'Chat here',
-                border: const UnderlineInputBorder(),
-                suffix: IconButton(
-                  onPressed: _sendMessage,
-                  icon: const Icon(Icons.send),
+              padding:
+                  const EdgeInsets.only(bottom: 4.0, left: 10.0, right: 10.0),
+              child: TextFormField(
+                minLines: 1,
+                maxLines: 3,
+                onTapOutside: (event) {
+                  FocusScope.of(context).unfocus();
+                },
+                controller: _messageController,
+                enabled: !_isGenerating,
+                decoration: InputDecoration(
+                  hintText:
+                      _isGenerating ? 'Generating...' : 'Type anything here..',
+                  border: const UnderlineInputBorder(),
+                  suffix: IconButton(
+                    onPressed: _sendMessage,
+                    icon: const Icon(Icons.send),
+                  ),
+                  suffixIconConstraints:
+                      const BoxConstraints(minWidth: 40, minHeight: 40),
                 ),
-                suffixIconConstraints:
-                    const BoxConstraints(minWidth: 40, minHeight: 40),
-              ),
-              onEditingComplete: () {
-                FocusScope.of(context).unfocus();
-              },
-            ),
-          ),
+                onFieldSubmitted: (value) {
+                  _sendMessage();
+                },
+                textInputAction: TextInputAction.send,
+              )),
         ],
       ),
     );
@@ -147,42 +149,92 @@ class _ChatScreenState extends State<ChatScreen> {
       });
 
       try {
-        OpenAI.instance.chat
-            .createStream(
-          model: "TheBloke/CodeLlama-7B-Instruct-GGUF",
-          messages: _chatContext,
-          temperature: 0.8,
-          maxTokens: -1,
-        )
-            .listen(
-          (openAiStreamChatCompletionModel) {
-            if (openAiStreamChatCompletionModel.choices[0].finishReason ==
-                "stop") {
-              setState(() {
-                _isGenerating = false;
-              });
-              return;
-            }
+        OpenAI.instance.model.list().then((models) async {
+          if (models.isEmpty) {
+            setState(() {
+              _isGenerating = false;
+            });
+            return;
+          }
+          OpenAIModelModel? selectedModel;
+          if (models.length > 1) {
+            await showDialog(
+              context: context,
+              builder: (builder) {
+                return AlertDialog(
+                  content: Column(
+                    children: [
+                      const Text('Choose a model:'),
+                      const SizedBox(height: 10.0),
+                      ListView.builder(
+                          itemCount: models.length,
+                          itemBuilder: (builder, index) {
+                            OpenAIModelModel model = models[index];
+                            return ListTile(
+                              title: Text(model.id),
+                              subtitle: Text(model.ownedBy),
+                              onTap: () {
+                                selectedModel = model;
+                                Navigator.pop(context, model);
+                              },
+                            );
+                          }),
+                    ],
+                  ),
+                );
+              },
+            );
+          } else {
+            selectedModel = models.first;
+          }
+          if (selectedModel == null) {
+            throw Exception('No model selected');
+          }
+          OpenAI.instance.chat
+              .createStream(
+            model: selectedModel!.id,
+            messages: _chatContext,
+            temperature: 0.8,
+            maxTokens: -1,
+          )
+              .listen(
+            (openAiStreamChatCompletionModel) {
+              if (openAiStreamChatCompletionModel.choices[0].finishReason ==
+                  "stop") {
+                _chatContext.add(OpenAIChatCompletionChoiceMessageModel(
+                  content: [
+                    OpenAIChatCompletionChoiceMessageContentItemModel.text(
+                      _messages.last['text'] ?? '',
+                    ),
+                  ],
+                  role: OpenAIChatMessageRole.assistant,
+                ));
+                setState(() {
+                  _isGenerating = false;
+                });
+                return;
+              }
 
-            if (_messages.isEmpty || _messages.last['role'] != 'ai') {
-              _addMessage(
-                openAiStreamChatCompletionModel
-                    .choices[0].delta.content!.first!.text!,
-                'ai',
-              );
-            } else {
-              setState(() {
-                _messages.last['text'] = (_messages.last['text'] ?? '') +
-                    openAiStreamChatCompletionModel
-                        .choices[0].delta.content!.first!.text!;
-              });
-            }
-            _scrollToBottom();
-          },
-        ).onError((error) {
-          setState(() {
-            _isGenerating = false;
-            _addMessage("Error: ${error.toString()}", 'error');
+              if (_messages.isEmpty || _messages.last['role'] != 'ai') {
+                _addMessage(
+                  openAiStreamChatCompletionModel
+                      .choices[0].delta.content!.first!.text!,
+                  'ai',
+                );
+              } else {
+                setState(() {
+                  _messages.last['text'] = (_messages.last['text'] ?? '') +
+                      openAiStreamChatCompletionModel
+                          .choices[0].delta.content!.first!.text!;
+                });
+              }
+              _scrollToBottom();
+            },
+          ).onError((error) {
+            setState(() {
+              _isGenerating = false;
+              _addMessage("Error: ${error.toString()}", 'error');
+            });
           });
         });
       } catch (e) {
