@@ -36,9 +36,17 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
+  String _systemContext =
+      'You are a helpful, smart, kind, and efficient AI assistant. You always fulfill the user\'s requests to the best of your ability.';
   final List<OpenAIChatCompletionChoiceMessageModel> _chatContext = [];
   bool _isGenerating = false;
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _handleSystemContext();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +54,9 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         title: const Text('Lef Chat'),
         actions: [
+          IconButton(
+              onPressed: _editSystemContext,
+              icon: const Icon(Icons.info_outline)),
           ElevatedButton(
               onPressed: _isGenerating ? null : _newChat,
               child: const Text('New Chat')),
@@ -79,7 +90,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             borderRadius: BorderRadius.circular(10.0),
                           ),
                           constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.6,
+                            maxWidth: MediaQuery.of(context).size.width * 0.8,
                             minWidth: MediaQuery.of(context).size.width * 0.3,
                           ),
                           child: Column(
@@ -113,11 +124,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         ),
                                       ),
                               ),
-                              // _isGenerating &&
-                              //         !isUser &&
-                              //         index == _messages.length - 1
-                              //     ? const LinearProgressIndicator()
-                              //     : const SizedBox(),
+                              const SizedBox(),
                             ],
                           ),
                         ),
@@ -190,7 +197,7 @@ class _ChatScreenState extends State<ChatScreen> {
             await showDialog(
               context: context,
               builder: (builder) {
-                return AlertDialog(
+                return AlertDialog.adaptive(
                   content: Column(
                     children: [
                       const Text('Choose a model:'),
@@ -301,5 +308,67 @@ class _ChatScreenState extends State<ChatScreen> {
         curve: Curves.easeOut,
       );
     });
+  }
+
+  void _handleSystemContext() {
+    if (_systemContext.isEmpty) {
+      return;
+    }
+    if (_chatContext.isEmpty) {
+      _chatContext.add(OpenAIChatCompletionChoiceMessageModel(
+        content: [
+          OpenAIChatCompletionChoiceMessageContentItemModel.text(
+            _systemContext,
+          ),
+        ],
+        role: OpenAIChatMessageRole.system,
+      ));
+    } else {
+      _chatContext.removeWhere((e) => e.role == OpenAIChatMessageRole.system);
+      _chatContext.insert(
+        0,
+        OpenAIChatCompletionChoiceMessageModel(
+          content: [
+            OpenAIChatCompletionChoiceMessageContentItemModel.text(
+              _systemContext,
+            ),
+          ],
+          role: OpenAIChatMessageRole.system,
+        ),
+      );
+    }
+  }
+
+  void _editSystemContext() {
+    TextEditingController systemContextController = TextEditingController();
+    systemContextController.text = _systemContext;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog.adaptive(
+          content: Scrollbar(
+            child: TextField(
+              decoration: const InputDecoration(
+                labelText: 'System context',
+                border: UnderlineInputBorder(),
+              ),
+              maxLines: 5,
+              minLines: 1,
+              controller: systemContextController,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _systemContext = systemContextController.text;
+                _handleSystemContext();
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
