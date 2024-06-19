@@ -43,7 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat App'),
+        title: const Text('Lef Chat'),
         actions: [
           ElevatedButton(
               onPressed: _isGenerating ? null : _newChat,
@@ -81,14 +81,24 @@ class _ChatScreenState extends State<ChatScreen> {
                             maxWidth: MediaQuery.of(context).size.width * 0.6,
                             minWidth: MediaQuery.of(context).size.width * 0.3,
                           ),
-                          child: ListTile(
-                            leading:
-                                Icon(isUser ? Icons.person : Icons.smart_toy),
-                            title: SelectableText(_messages[index]['text']!),
-                            subtitle: Text(
-                              _messages[index]['timestamp']!,
-                              style: const TextStyle(fontSize: 10),
-                            ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: Icon(
+                                    isUser ? Icons.person : Icons.smart_toy),
+                                title:
+                                    SelectableText(_messages[index]['text']!),
+                                subtitle: Text(
+                                  _messages[index]['timestamp']!,
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ),
+                              // _isGenerating &&
+                              //         !isUser &&
+                              //         index == _messages.length - 1
+                              //     ? const LinearProgressIndicator()
+                              //     : const SizedBox(),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 10.0),
@@ -108,13 +118,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   FocusScope.of(context).unfocus();
                 },
                 controller: _messageController,
-                enabled: !_isGenerating,
                 decoration: InputDecoration(
                   hintText:
                       _isGenerating ? 'Generating...' : 'Type anything here..',
                   border: const UnderlineInputBorder(),
                   suffix: IconButton(
-                    onPressed: _sendMessage,
+                    onPressed: _isGenerating ? null : _sendMessage,
                     icon: const Icon(Icons.send),
                   ),
                   suffixIconConstraints:
