@@ -1,5 +1,6 @@
 import 'package:dart_openai/dart_openai.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 void main() {
@@ -92,6 +93,25 @@ class _ChatScreenState extends State<ChatScreen> {
                                   _messages[index]['timestamp']!,
                                   style: const TextStyle(fontSize: 10),
                                 ),
+                                trailing: isUser
+                                    ? null
+                                    : IconButton(
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(
+                                              text: _messages[index]['text']!));
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content:
+                                                  Text('Copied to clipboard!'),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.copy,
+                                          size: 20,
+                                        ),
+                                      ),
                               ),
                               // _isGenerating &&
                               //         !isUser &&
