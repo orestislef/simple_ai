@@ -41,6 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<OpenAIChatCompletionChoiceMessageModel> _chatContext = [];
   bool _isGenerating = false;
   final ScrollController _scrollController = ScrollController();
+  OpenAIModelModel? selectedModel;
 
   @override
   void initState() {
@@ -192,8 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
             });
             return;
           }
-          OpenAIModelModel? selectedModel;
-          if (models.length > 1) {
+          if (models.length > 1 && selectedModel == null) {
             await showDialog(
               context: context,
               builder: (builder) {
