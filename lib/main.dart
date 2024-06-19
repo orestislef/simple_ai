@@ -1,10 +1,11 @@
-import 'dart:async';
-import 'dart:convert';
-
+import 'package:dart_openai/dart_openai.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 void main() {
+  OpenAI.baseUrl = 'http://192.168.24.21:1234';
+  OpenAI.apiKey = 'lm-studio';
+  OpenAI.showLogs = true;
   runApp(const MyApp());
 }
 
@@ -31,131 +32,193 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-  }
-
-  final TextEditingController _controller = TextEditingController();
-  final StreamController<String> _streamController = StreamController<String>();
-  String _response = '';
-
-  late ScrollController _scrollController;
-
-  Future<void> _sendMessage(String userInput) async {
-    const url = 'http://192.168.24.21:1234/v1/chat/completions';
-    final headers = {"Content-Type": "application/json"};
-    final body = jsonEncode({
-      "model": "LM Studio Community/Meta-Llama-3-8B-Instruct-GGUF",
-      "messages": [
-        {"role": "user", "content": userInput}
-      ],
-      "temperature": 0.7,
-      "max_tokens": -1,
-      "stream": true
-    });
-
-    try {
-      final request = http.Request('POST', Uri.parse(url));
-      request.headers.addAll(headers);
-      request.body = body;
-
-      final response = await request.send();
-      response.stream.transform(utf8.decoder).listen((value) {
-        if (value.startsWith('data: ')) {
-          final jsonString = value.substring(6);
-          final jsonData = jsonDecode(jsonString);
-          final content = jsonData['choices'][0]['delta']['content'];
-          setState(() {
-            _response += content;
-          });
-          _streamController.add(_response);
-        }
-      });
-    } catch (e) {
-      _streamController.add('Error: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _streamController.close();
-    _scrollController.dispose();
-    super.dispose();
-  }
+  final TextEditingController _messageController = TextEditingController();
+  final List<Map<String, String>> _messages = [];
+  final List<OpenAIChatCompletionChoiceMessageModel> _chatContext = [];
+  bool _isGenerating = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat App'),
+        actions: [
+          ElevatedButton(
+              onPressed: _isGenerating ? null : _newChat,
+              child: const Text('New Chat')),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _controller,
-              decoration:
-                  const InputDecoration(labelText: 'Enter your message'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                _response = ''; // Clear previous response
-                _sendMessage(_controller.text);
-              },
-              child: const Text('Send'),
-            ),
-            const SizedBox(height: 20),
-            const Text('Response:'),
-            const SizedBox(height: 10),
-            Expanded(
-              child: StreamBuilder<String>(
-                stream: _streamController.stream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    WidgetsBinding.instance
-                        .addPostFrameCallback((_) => _scrollToBottom());
-                    return SizedBox(
-                      width: double.infinity,
-                      child: Card(
-                        elevation: 5,
-                        child: Padding(
-                          padding: const EdgeInsets.all(5.0),
-                          child: Scrollbar(
-                            child: SingleChildScrollView(
-                              controller: _scrollController,
-                              child: SelectableText(
-                                snapshot.data!,
+      body: Column(
+        children: [
+          Expanded(
+            child: Scrollbar(
+              child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(10.0),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    bool isUser = _messages[index]['role'] == 'user';
+                    return Column(
+                      crossAxisAlignment: isUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isUser ? Colors.blue[200] : Colors.grey[200],
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                offset: Offset(0, 2),
+                                blurRadius: 6.0,
                               ),
+                            ],
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.6,
+                            minWidth: MediaQuery.of(context).size.width * 0.3,
+                          ),
+                          child: ListTile(
+                            leading:
+                                Icon(isUser ? Icons.person : Icons.smart_toy),
+                            title: SelectableText(_messages[index]['text']!),
+                            subtitle: Text(
+                              _messages[index]['timestamp']!,
+                              style: const TextStyle(fontSize: 10),
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 10.0),
+                      ],
                     );
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    return const Text('Waiting for response...');
-                  }
-                },
-              ),
+                  }),
             ),
-          ],
-        ),
+          ),
+          if (_isGenerating) const LinearProgressIndicator(),
+          Padding(
+            padding:
+                const EdgeInsets.only(bottom: 4.0, left: 10.0, right: 10.0),
+            child: TextFormField(
+              minLines: 1,
+              maxLines: 3,
+              onTapOutside: (event) {
+                FocusScope.of(context).unfocus();
+              },
+              controller: _messageController,
+              enabled: !_isGenerating,
+              decoration: InputDecoration(
+                hintText: 'Chat here',
+                border: const UnderlineInputBorder(),
+                suffix: IconButton(
+                  onPressed: _sendMessage,
+                  icon: const Icon(Icons.send),
+                ),
+                suffixIconConstraints:
+                    const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
+              onEditingComplete: () {
+                FocusScope.of(context).unfocus();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          _scrollController.position.maxScrollExtent);
+  void _sendMessage() {
+    if (_messageController.text.isNotEmpty) {
+      String userMessage = _messageController.text;
+      _addMessage(userMessage, 'user');
+      _chatContext.add(OpenAIChatCompletionChoiceMessageModel(
+        content: [
+          OpenAIChatCompletionChoiceMessageContentItemModel.text(
+            userMessage,
+          ),
+        ],
+        role: OpenAIChatMessageRole.user,
+      ));
+
+      setState(() {
+        _isGenerating = true;
+        _messageController.clear();
+      });
+
+      try {
+        OpenAI.instance.chat
+            .createStream(
+          model: "TheBloke/CodeLlama-7B-Instruct-GGUF",
+          messages: _chatContext,
+          temperature: 0.8,
+          maxTokens: -1,
+        )
+            .listen(
+          (openAiStreamChatCompletionModel) {
+            if (openAiStreamChatCompletionModel.choices[0].finishReason ==
+                "stop") {
+              setState(() {
+                _isGenerating = false;
+              });
+              return;
+            }
+
+            if (_messages.isEmpty || _messages.last['role'] != 'ai') {
+              _addMessage(
+                openAiStreamChatCompletionModel
+                    .choices[0].delta.content!.first!.text!,
+                'ai',
+              );
+            } else {
+              setState(() {
+                _messages.last['text'] = (_messages.last['text'] ?? '') +
+                    openAiStreamChatCompletionModel
+                        .choices[0].delta.content!.first!.text!;
+              });
+            }
+            _scrollToBottom();
+          },
+        ).onError((error) {
+          setState(() {
+            _isGenerating = false;
+            _addMessage("Error: ${error.toString()}", 'error');
+          });
+        });
+      } catch (e) {
+        setState(() {
+          _isGenerating = false;
+          _addMessage("Error: $e", 'error');
+        });
+      }
     }
+  }
+
+  void _newChat() {
+    if (_isGenerating) {
+      return;
+    }
+    setState(() {
+      _messages.clear();
+      _chatContext.clear();
+    });
+  }
+
+  void _addMessage(String text, String role) {
+    String timestamp = DateFormat('dd-MM-yyyy HH:mm:ss').format(DateTime.now());
+    setState(() {
+      _messages.add({'text': text, 'role': role, 'timestamp': timestamp});
+    });
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 }

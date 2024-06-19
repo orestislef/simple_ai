@@ -10,8 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  http: ^1.2.1
-  html: ^0.15.4
+  dart_openai: ^5.1.0
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
