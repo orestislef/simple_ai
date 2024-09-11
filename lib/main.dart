@@ -63,106 +63,108 @@ class _ChatScreenState extends State<ChatScreen> {
               child: const Text('New Chat')),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Scrollbar(
-              child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(10.0),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    bool isUser = _messages[index]['role'] == 'user';
-                    return Column(
-                      crossAxisAlignment: isUser
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isUser ? Colors.blue[200] : Colors.grey[200],
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                offset: Offset(isUser ? 2 : -2, 2),
-                                blurRadius: 6.0,
-                              ),
-                            ],
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.8,
-                            minWidth: MediaQuery.of(context).size.width * 0.3,
-                          ),
-                          child: Column(
-                            children: [
-                              ListTile(
-                                leading: Icon(
-                                    isUser ? Icons.person : Icons.smart_toy),
-                                title:
-                                    SelectableText(_messages[index]['text']!),
-                                subtitle: Text(
-                                  _messages[index]['timestamp']!,
-                                  style: const TextStyle(fontSize: 10),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Scrollbar(
+                child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(10.0),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      bool isUser = _messages[index]['role'] == 'user';
+                      return Column(
+                        crossAxisAlignment: isUser
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: isUser ? Colors.blue[200] : Colors.grey[200],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  offset: Offset(isUser ? 2 : -2, 2),
+                                  blurRadius: 6.0,
                                 ),
-                                trailing: isUser
-                                    ? null
-                                    : IconButton(
-                                        onPressed: () {
-                                          Clipboard.setData(ClipboardData(
-                                              text: _messages[index]['text']!));
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content:
-                                                  Text('Copied to clipboard!'),
-                                            ),
-                                          );
-                                        },
-                                        icon: const Icon(
-                                          Icons.copy,
-                                          size: 20,
+                              ],
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.8,
+                              minWidth: MediaQuery.of(context).size.width * 0.3,
+                            ),
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  leading: Icon(
+                                      isUser ? Icons.person : Icons.smart_toy),
+                                  title:
+                                      SelectableText(_messages[index]['text']!),
+                                  subtitle: Text(
+                                    _messages[index]['timestamp']!,
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                  trailing: isUser
+                                      ? null
+                                      : IconButton(
+                                          onPressed: () {
+                                            Clipboard.setData(ClipboardData(
+                                                text: _messages[index]['text']!));
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content:
+                                                    Text('Copied to clipboard!'),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.copy,
+                                            size: 20,
+                                          ),
                                         ),
-                                      ),
-                              ),
-                              const SizedBox(),
-                            ],
+                                ),
+                                const SizedBox(),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10.0),
-                      ],
-                    );
-                  }),
+                          const SizedBox(height: 10.0),
+                        ],
+                      );
+                    }),
+              ),
             ),
-          ),
-          if (_isGenerating) const LinearProgressIndicator(),
-          Padding(
-              padding:
-                  const EdgeInsets.only(bottom: 4.0, left: 10.0, right: 10.0),
-              child: TextFormField(
-                minLines: 1,
-                maxLines: 3,
-                onTapOutside: (event) {
-                  FocusScope.of(context).unfocus();
-                },
-                controller: _messageController,
-                decoration: InputDecoration(
-                  hintText:
-                      _isGenerating ? 'Generating...' : 'Type anything here..',
-                  border: const UnderlineInputBorder(),
-                  suffix: IconButton(
-                    onPressed: _isGenerating ? null : _sendMessage,
-                    icon: const Icon(Icons.send),
+            if (_isGenerating) const LinearProgressIndicator(),
+            Padding(
+                padding:
+                    const EdgeInsets.only(bottom: 4.0, left: 10.0, right: 10.0),
+                child: TextFormField(
+                  minLines: 1,
+                  maxLines: 3,
+                  onTapOutside: (event) {
+                    FocusScope.of(context).unfocus();
+                  },
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText:
+                        _isGenerating ? 'Generating...' : 'Type anything here..',
+                    border: const UnderlineInputBorder(),
+                    suffix: IconButton(
+                      onPressed: _isGenerating ? null : _sendMessage,
+                      icon: const Icon(Icons.send),
+                    ),
+                    suffixIconConstraints:
+                        const BoxConstraints(minWidth: 40, minHeight: 40),
                   ),
-                  suffixIconConstraints:
-                      const BoxConstraints(minWidth: 40, minHeight: 40),
-                ),
-                onFieldSubmitted: (value) {
-                  _sendMessage();
-                },
-                textInputAction: TextInputAction.send,
-              )),
-        ],
+                  onFieldSubmitted: (value) {
+                    _sendMessage();
+                  },
+                  textInputAction: TextInputAction.send,
+                )),
+          ],
+        ),
       ),
     );
   }
