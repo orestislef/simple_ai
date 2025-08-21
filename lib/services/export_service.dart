@@ -1,6 +1,9 @@
 import 'dart:convert';
-import 'dart:html' as html show window, document, AnchorElement, Url, Blob;
 import 'package:flutter/foundation.dart';
+
+// Conditional imports for web platform
+import 'dart:html' as html show document, AnchorElement, Url, Blob
+  if (dart.library.io) 'export_service_io.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 

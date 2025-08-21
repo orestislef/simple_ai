@@ -22,22 +22,31 @@ class _TypingIndicatorState extends State<TypingIndicator>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 
     _dotControllers = List.generate(
       3,
       (index) => AnimationController(
-        duration: const Duration(milliseconds: 600),
+        duration: const Duration(milliseconds: 800),
         vsync: this,
       ),
     );
 
     _dotAnimations = _dotControllers.map((controller) {
-      return Tween<double>(begin: 0.4, end: 1.0).animate(
-        CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-      );
+      return TweenSequence<double>([
+        TweenSequenceItem(
+          tween: Tween<double>(begin: 0.4, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 50,
+        ),
+        TweenSequenceItem(
+          tween: Tween<double>(begin: 1.0, end: 0.4)
+              .chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 50,
+        ),
+      ]).animate(controller);
     }).toList();
 
     if (widget.isVisible) {
@@ -70,9 +79,9 @@ class _TypingIndicatorState extends State<TypingIndicator>
     _animationController.forward();
     
     for (int i = 0; i < _dotControllers.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 200), () {
+      Future.delayed(Duration(milliseconds: i * 150), () {
         if (mounted && widget.isVisible) {
-          _dotControllers[i].repeat(reverse: true);
+          _dotControllers[i].repeat();
         }
       });
     }
@@ -145,15 +154,25 @@ class _TypingIndicatorState extends State<TypingIndicator>
                               animation: _dotAnimations[index],
                               builder: (context, child) {
                                 return Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                                  child: Opacity(
-                                    opacity: _dotAnimations[index].value,
-                                    child: Container(
-                                      width: 4,
-                                      height: 4,
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[600],
-                                        shape: BoxShape.circle,
+                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  child: Transform.translate(
+                                    offset: Offset(0, -3 * _dotAnimations[index].value),
+                                    child: Transform.scale(
+                                      scale: 0.8 + (0.4 * _dotAnimations[index].value),
+                                      child: Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[600],
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.2),
+                                              blurRadius: 2,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),

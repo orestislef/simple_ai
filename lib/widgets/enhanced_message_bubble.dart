@@ -23,33 +23,55 @@ class EnhancedMessageBubble extends StatefulWidget {
 }
 
 class _EnhancedMessageBubbleState extends State<EnhancedMessageBubble>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animationController;
+  late AnimationController _hoverController;
   late Animation<double> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _hoverAnimation;
   final ChatService _chatService = ChatService();
   bool _isHovered = false;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _slideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
     
+    // Only create controllers if animations are enabled
     if (widget.showAnimations) {
+      _animationController = AnimationController(
+        duration: const Duration(milliseconds: 400),
+        vsync: this,
+      );
+      _hoverController = AnimationController(
+        duration: const Duration(milliseconds: 200),
+        vsync: this,
+      );
+      
+      _slideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+      );
+      _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+      );
+      _hoverAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+        CurvedAnimation(parent: _hoverController, curve: Curves.easeInOut),
+      );
+      
       _animationController.forward();
     } else {
-      _animationController.value = 1.0;
+      // Create minimal controllers for static display
+      _animationController = AnimationController.unbounded(vsync: this)..value = 1.0;
+      _hoverController = AnimationController.unbounded(vsync: this)..value = 1.0;
+      _slideAnimation = AlwaysStoppedAnimation(1.0);
+      _scaleAnimation = AlwaysStoppedAnimation(1.0);
+      _hoverAnimation = AlwaysStoppedAnimation(1.0);
     }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _hoverController.dispose();
     super.dispose();
   }
 
@@ -60,13 +82,19 @@ class _EnhancedMessageBubbleState extends State<EnhancedMessageBubble>
     }
 
     return AnimatedBuilder(
-      animation: _slideAnimation,
+      animation: Listenable.merge([_slideAnimation, _hoverAnimation]),
       builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - _slideAnimation.value)),
-          child: Opacity(
-            opacity: _slideAnimation.value,
-            child: _buildMessageContent(context),
+        return Transform.scale(
+          scale: _scaleAnimation.value * _hoverAnimation.value,
+          child: Transform.translate(
+            offset: Offset(
+              widget.message.role.isUser ? 30 * (1 - _slideAnimation.value) : -30 * (1 - _slideAnimation.value),
+              10 * (1 - _slideAnimation.value),
+            ),
+            child: Opacity(
+              opacity: _slideAnimation.value,
+              child: _buildMessageContent(context),
+            ),
           ),
         );
       },
@@ -79,8 +107,14 @@ class _EnhancedMessageBubbleState extends State<EnhancedMessageBubble>
     final isMobile = ResponsiveLayout.isMobile(context);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _hoverController.forward();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _hoverController.reverse();
+      },
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: isMobile ? 12 : 16,
@@ -208,43 +242,20 @@ class _EnhancedMessageBubbleState extends State<EnhancedMessageBubble>
       mainAxisSize: MainAxisSize.min,
       children: [
         if (!widget.message.role.isError) ...[
-          InkWell(
+          _AnimatedButton(
             onTap: _toggleFavorite,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                widget.message.isFavorite ? Icons.star : Icons.star_border,
-                size: 16,
-                color: widget.message.isFavorite
-                    ? Colors.amber[600]
-                    : Colors.grey[600],
-              ),
-            ),
+            icon: widget.message.isFavorite ? Icons.star : Icons.star_border,
+            color: widget.message.isFavorite ? Colors.amber[600] : Colors.grey[600],
           ),
-          InkWell(
+          _AnimatedButton(
             onTap: _showReactionPicker,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.add_reaction_outlined,
-                size: 16,
-                color: Colors.grey[600],
-              ),
-            ),
+            icon: Icons.add_reaction_outlined,
+            color: Colors.grey[600],
           ),
-          InkWell(
+          _AnimatedButton(
             onTap: () => _copyToClipboard(context),
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.copy,
-                size: 16,
-                color: Colors.grey[600],
-              ),
-            ),
+            icon: Icons.copy,
+            color: Colors.grey[600],
           ),
         ],
       ],
@@ -354,5 +365,71 @@ class _EnhancedMessageBubbleState extends State<EnhancedMessageBubble>
     
     final updatedMessage = widget.message.copyWith(reactions: updatedReactions);
     _chatService.updateMessage(updatedMessage);
+  }
+}
+
+class _AnimatedButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final IconData icon;
+  final Color? color;
+
+  const _AnimatedButton({
+    required this.onTap,
+    required this.icon,
+    this.color,
+  });
+
+  @override
+  State<_AnimatedButton> createState() => _AnimatedButtonState();
+}
+
+class _AnimatedButtonState extends State<_AnimatedButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: InkWell(
+            onTap: () {
+              _controller.forward().then((_) => _controller.reverse());
+              widget.onTap();
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                widget.icon,
+                size: 16,
+                color: widget.color,
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

@@ -7,7 +7,6 @@ import '../services/ai_service.dart';
 import '../services/safety_service.dart';
 import '../services/prompt_service.dart';
 import '../services/chat_service.dart';
-import '../services/search_service.dart';
 import '../services/settings_service.dart';
 import '../utils/date_formatter.dart';
 import '../utils/snackbar_utils.dart';
@@ -34,15 +33,14 @@ class _ChatScreenState extends State<ChatScreen> {
   final SafetyService _safetyService = SafetyService();
   final PromptService _promptService = PromptService();
   final ChatService _chatService = ChatService();
-  final SearchService _searchService = SearchService();
   final SettingsService _settingsService = SettingsService();
 
-  String _systemContext = AppConfig.defaultSystemPrompt;
+  final String _systemContext = AppConfig.defaultSystemPrompt;
   bool _isGenerating = false;
   List<OpenAIModelModel> _availableModels = [];
   OpenAIModelModel? _selectedModel;
   Stream<OpenAIStreamChatCompletionModel>? _currentStream;
-  List<OpenAIChatCompletionChoiceMessageModel> _chatContext = [];
+  final List<OpenAIChatCompletionChoiceMessageModel> _chatContext = [];
   bool _isLoadingModels = false;
 
   @override
@@ -215,15 +213,26 @@ class _ChatScreenState extends State<ChatScreen> {
             horizontal: ResponsiveLayout.isMobile(context) ? 0 : 16,
           ),
           itemCount: messages.length,
+          // Performance optimizations
+          cacheExtent: 1000, // Cache more items for smoother scrolling
+          addAutomaticKeepAlives: false, // Don't keep all widgets alive
+          addRepaintBoundaries: true, // Isolate repaints
           itemBuilder: (context, index) {
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: ResponsiveLayout.getMessageMaxWidth(context),
-              ),
-              child: EnhancedMessageBubble(
-                message: messages[index],
-                isCompact: _settingsService.compactMode,
-                showAnimations: _settingsService.messageAnimations,
+            final message = messages[index];
+            final isCompact = _settingsService.compactMode;
+            final showAnimations = _settingsService.messageAnimations;
+            
+            return RepaintBoundary( // Isolate each message for better performance
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: ResponsiveLayout.getMessageMaxWidth(context),
+                ),
+                child: EnhancedMessageBubble(
+                  key: ValueKey(message.id), // Stable key for widget recycling
+                  message: message,
+                  isCompact: isCompact,
+                  showAnimations: showAnimations,
+                ),
               ),
             );
           },
@@ -312,7 +321,9 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       });
     } catch (e) {
-      SnackBarUtils.showError(context, 'Failed to load models: $e');
+      if (mounted) {
+        SnackBarUtils.showError(context, 'Failed to load models: $e');
+      }
     } finally {
       setState(() {
         _isLoadingModels = false;
@@ -381,14 +392,14 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_availableModels.isEmpty) {
       await _loadModels();
       if (_availableModels.isEmpty) {
-        SnackBarUtils.showError(context, 'No models available. Please check your server.');
+        if (mounted) {
+          SnackBarUtils.showError(context, 'No models available. Please check your server.');
+        }
         return;
       }
     }
 
-    if (_selectedModel == null) {
-      _selectedModel = _availableModels.first;
-    }
+    _selectedModel ??= _availableModels.first;
 
     final userMessage = Message(
       text: message,
@@ -452,7 +463,9 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       _handleError('Connection error: Please check if the AI server is running and accessible.');
-      SnackBarUtils.showError(context, 'Error: $e');
+      if (mounted) {
+        SnackBarUtils.showError(context, 'Error: $e');
+      }
     }
   }
 
@@ -503,51 +516,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _editSystemContext() {
-    final controller = TextEditingController(text: _systemContext);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.settings),
-            SizedBox(width: 8),
-            Text('System Settings'),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'System Prompt',
-              hintText: 'Enter instructions for the AI...',
-            ),
-            maxLines: 5,
-            minLines: 3,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              setState(() {
-                _systemContext = controller.text;
-              });
-              _handleSystemContext();
-              Navigator.of(context).pop();
-              SnackBarUtils.showSuccess(context, 'System prompt updated');
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showPromptManagement() {
     showDialog(

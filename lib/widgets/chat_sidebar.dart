@@ -62,7 +62,7 @@ class _ChatSidebarState extends State<ChatSidebar> {
       ),
       child: SizedBox(
         width: double.infinity,
-        child: ElevatedButton.icon(
+        child: _AnimatedElevatedButton(
           onPressed: widget.onNewChat,
           icon: const Icon(Icons.add),
           label: const Text('New Chat'),
@@ -108,19 +108,27 @@ class _ChatSidebarState extends State<ChatSidebar> {
             final chat = chats[index];
             final isSelected = currentChat?.id == chat.id;
 
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: isSelected
-                    ? Border.all(
-                        color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                      )
-                    : null,
-              ),
+            return TweenAnimationBuilder<double>(
+              duration: Duration(milliseconds: 200 + (index * 50)),
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              builder: (context, animation, child) {
+                return Transform.translate(
+                  offset: Offset(-50 * (1 - animation), 0),
+                  child: Opacity(
+                    opacity: animation,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: isSelected
+                            ? Border.all(
+                                color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                              )
+                            : null,
+                      ),
               child: ListTile(
                 dense: true,
                 leading: Container(
@@ -154,32 +162,57 @@ class _ChatSidebarState extends State<ChatSidebar> {
                     color: Colors.grey[600],
                   ),
                 ),
-                trailing: PopupMenuButton(
-                  icon: Icon(
-                    Icons.more_vert,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: const Row(
-                        children: [
-                          Icon(Icons.delete, size: 18, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Delete'),
-                        ],
+                trailing: Theme(
+                  data: Theme.of(context).copyWith(
+                    popupMenuTheme: PopupMenuThemeData(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.grey[850] 
+                          : Colors.white,
+                      textStyle: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.white 
+                            : Colors.black87,
                       ),
                     ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      _showDeleteConfirmation(chat);
-                    }
-                  },
+                  ),
+                  child: PopupMenuButton(
+                    icon: Icon(
+                      Icons.more_vert,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete, size: 18, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Delete',
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark 
+                                    ? Colors.white 
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _showDeleteConfirmation(chat);
+                      }
+                    },
+                  ),
                 ),
                 onTap: () => widget.onChatSelected(chat),
               ),
+                    ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -208,6 +241,68 @@ class _ChatSidebarState extends State<ChatSidebar> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedElevatedButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final Widget icon;
+  final Widget label;
+  final ButtonStyle? style;
+
+  const _AnimatedElevatedButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    this.style,
+  });
+
+  @override
+  State<_AnimatedElevatedButton> createState() => _AnimatedElevatedButtonState();
+}
+
+class _AnimatedElevatedButtonState extends State<_AnimatedElevatedButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              _controller.forward().then((_) => _controller.reverse());
+              widget.onPressed();
+            },
+            icon: widget.icon,
+            label: widget.label,
+            style: widget.style,
+          ),
+        );
+      },
     );
   }
 }

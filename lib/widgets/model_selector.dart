@@ -101,10 +101,14 @@ class _ModelSelectorState extends State<ModelSelector> {
         child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.grey[800]?.withValues(alpha: 0.8) 
+              : Theme.of(context).primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? Colors.grey[600]?.withValues(alpha: 0.5) ?? Colors.grey
+                : Theme.of(context).primaryColor.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -113,7 +117,9 @@ class _ModelSelectorState extends State<ModelSelector> {
             Icon(
               Icons.psychology,
               size: 18,
-              color: Theme.of(context).primaryColor,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white 
+                  : Theme.of(context).primaryColor,
             ),
             const SizedBox(width: 6),
             ConstrainedBox(
@@ -121,7 +127,9 @@ class _ModelSelectorState extends State<ModelSelector> {
               child: Text(
                 widget.selectedModel?.id ?? 'Select Model',
                 style: TextStyle(
-                  color: Theme.of(context).primaryColor,
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white 
+                      : Colors.grey[800],
                   fontWeight: FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -132,7 +140,9 @@ class _ModelSelectorState extends State<ModelSelector> {
             Icon(
               Icons.arrow_drop_down,
               size: 18,
-              color: Theme.of(context).primaryColor,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white 
+                  : Theme.of(context).primaryColor,
             ),
           ],
         ),

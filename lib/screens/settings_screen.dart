@@ -265,44 +265,101 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<theme_service.ThemeMode>(
-              title: const Text('Light'),
-              subtitle: const Text('Light theme'),
-              secondary: const Icon(Icons.light_mode),
-              value: theme_service.ThemeMode.light,
-              groupValue: _themeService.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  _themeService.setThemeMode(value);
-                  Navigator.of(context).pop();
-                }
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 300),
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              builder: (context, animation, child) {
+                return Transform.scale(
+                  scale: animation,
+                  child: Opacity(
+                    opacity: animation,
+                    child: child,
+                  ),
+                );
               },
+              child: ListTile(
+                leading: const Icon(Icons.light_mode),
+                title: const Text('Light'),
+                subtitle: const Text('Light theme'),
+                trailing: Radio<theme_service.ThemeMode>(
+                  value: theme_service.ThemeMode.light,
+                  groupValue: _themeService.themeMode,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _themeService.setThemeMode(value);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+                onTap: () {
+                  _themeService.setThemeMode(theme_service.ThemeMode.light);
+                  Navigator.of(context).pop();
+                },
+              ),
             ),
-            RadioListTile<theme_service.ThemeMode>(
-              title: const Text('Dark'),
-              subtitle: const Text('Dark theme'),
-              secondary: const Icon(Icons.dark_mode),
-              value: theme_service.ThemeMode.dark,
-              groupValue: _themeService.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  _themeService.setThemeMode(value);
-                  Navigator.of(context).pop();
-                }
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 400),
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              builder: (context, animation, child) {
+                return Transform.scale(
+                  scale: animation,
+                  child: Opacity(
+                    opacity: animation,
+                    child: child,
+                  ),
+                );
               },
+              child: ListTile(
+                leading: const Icon(Icons.dark_mode),
+                title: const Text('Dark'),
+                subtitle: const Text('Dark theme'),
+                trailing: Radio<theme_service.ThemeMode>(
+                  value: theme_service.ThemeMode.dark,
+                  groupValue: _themeService.themeMode,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _themeService.setThemeMode(value);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+                onTap: () {
+                  _themeService.setThemeMode(theme_service.ThemeMode.dark);
+                  Navigator.of(context).pop();
+                },
+              ),
             ),
-            RadioListTile<theme_service.ThemeMode>(
-              title: const Text('System'),
-              subtitle: const Text('Follow system theme'),
-              secondary: const Icon(Icons.brightness_auto),
-              value: theme_service.ThemeMode.system,
-              groupValue: _themeService.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  _themeService.setThemeMode(value);
-                  Navigator.of(context).pop();
-                }
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 500),
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              builder: (context, animation, child) {
+                return Transform.scale(
+                  scale: animation,
+                  child: Opacity(
+                    opacity: animation,
+                    child: child,
+                  ),
+                );
               },
+              child: ListTile(
+                leading: const Icon(Icons.brightness_auto),
+                title: const Text('System'),
+                subtitle: const Text('Follow system theme'),
+                trailing: Radio<theme_service.ThemeMode>(
+                  value: theme_service.ThemeMode.system,
+                  groupValue: _themeService.themeMode,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _themeService.setThemeMode(value);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+                onTap: () {
+                  _themeService.setThemeMode(theme_service.ThemeMode.system);
+                  Navigator.of(context).pop();
+                },
+              ),
             ),
           ],
         ),
@@ -440,7 +497,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListTile(
       leading: const Icon(Icons.dns),
       title: const Text('Server Configuration'),
-      subtitle: Text('${_settingsService.baseUrl}'),
+      subtitle: Text(_settingsService.baseUrl),
       trailing: const Icon(Icons.chevron_right),
       onTap: _showServerConfigDialog,
     );
@@ -463,11 +520,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedProtocol,
+                  initialValue: selectedProtocol,
                   decoration: const InputDecoration(labelText: 'Protocol'),
-                  items: const [
-                    DropdownMenuItem(value: 'http', child: Text('HTTP')),
-                    DropdownMenuItem(value: 'https', child: Text('HTTPS')),
+                  dropdownColor: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.grey[800] 
+                      : Colors.white,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'http', 
+                      child: Text(
+                        'HTTP',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.white 
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'https', 
+                      child: Text(
+                        'HTTPS',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.white 
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -527,8 +607,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Update AI service configuration
                 _aiService.updateConfiguration();
                 
-                Navigator.of(context).pop();
-                SnackBarUtils.showSuccess(context, 'Server configuration updated');
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  SnackBarUtils.showSuccess(context, 'Server configuration updated');
+                }
               },
               child: const Text('Save'),
             ),
@@ -543,20 +625,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Update configuration and test connection
       _aiService.updateConfiguration();
       
-      SnackBarUtils.showInfo(context, 'Testing connection...');
+      if (mounted) {
+        SnackBarUtils.showInfo(context, 'Testing connection...');
+      }
       
       final models = await _aiService.getAvailableModels();
       
-      if (models.isNotEmpty) {
-        SnackBarUtils.showSuccess(
-          context, 
-          'Connection successful! Found ${models.length} model(s)',
-        );
-      } else {
-        SnackBarUtils.showWarning(context, 'Connected but no models found');
+      if (mounted) {
+        if (models.isNotEmpty) {
+          SnackBarUtils.showSuccess(
+            context, 
+            'Connection successful! Found ${models.length} model(s)',
+          );
+        } else {
+          SnackBarUtils.showWarning(context, 'Connected but no models found');
+        }
       }
     } catch (e) {
-      SnackBarUtils.showError(context, 'Connection failed: $e');
+      if (mounted) {
+        SnackBarUtils.showError(context, 'Connection failed: $e');
+      }
     }
   }
 }

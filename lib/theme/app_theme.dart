@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
+  // Cache theme data for better performance
+  static ThemeData? _lightTheme;
+  static ThemeData? _darkTheme;
+  
   static ThemeData get lightTheme {
+    _lightTheme ??= _createLightTheme();
+    return _lightTheme!;
+  }
+  
+  static ThemeData _createLightTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -43,6 +52,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
+          animationDuration: const Duration(milliseconds: 200),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -54,6 +64,11 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
+    _darkTheme ??= _createDarkTheme();
+    return _darkTheme!;
+  }
+  
+  static ThemeData _createDarkTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -95,9 +110,16 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
+          animationDuration: const Duration(milliseconds: 200),
         ),
       ),
     );
+  }
+  
+  // Method to clear theme cache when needed (e.g., when system theme changes)
+  static void clearThemeCache() {
+    _lightTheme = null;
+    _darkTheme = null;
   }
 }
 

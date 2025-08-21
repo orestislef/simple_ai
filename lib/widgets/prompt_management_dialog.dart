@@ -188,15 +188,4 @@ class _PromptManagementDialogState extends State<PromptManagementDialog> {
     );
   }
 
-  static Future<void> show(
-    BuildContext context,
-    Function(String) onPromptSelected,
-  ) {
-    return showDialog(
-      context: context,
-      builder: (context) => PromptManagementDialog(
-        onPromptSelected: onPromptSelected,
-      ),
-    );
-  }
 }
