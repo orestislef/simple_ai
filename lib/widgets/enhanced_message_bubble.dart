@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/message.dart';
 import '../theme/app_theme.dart';
 import '../utils/snackbar_utils.dart';
@@ -92,7 +93,7 @@ class _EnhancedMessageBubbleState extends State<EnhancedMessageBubble>
               10 * (1 - _slideAnimation.value),
             ),
             child: Opacity(
-              opacity: _slideAnimation.value,
+              opacity: _slideAnimation.value.clamp(0.0, 1.0),
               child: _buildMessageContent(context),
             ),
           ),
@@ -158,15 +159,79 @@ class _EnhancedMessageBubbleState extends State<EnhancedMessageBubble>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: SelectableText(
-                                  widget.message.text,
-                                  style: AppTextStyles.messageText.copyWith(
-                                    color: widget.message.role.isUser
-                                        ? Colors.white
-                                        : (isDark ? Colors.white : Colors.black87),
-                                    fontSize: widget.isCompact ? 14 : 16,
+                                child: MarkdownBody(
+                                  data: widget.message.text,
+                                  selectable: true,
+                                  styleSheet: MarkdownStyleSheet(
+                                    p: AppTextStyles.messageText.copyWith(
+                                      color: widget.message.role.isUser
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                      fontSize: widget.isCompact ? 14 : 16,
+                                    ),
+                                    code: TextStyle(
+                                      backgroundColor: widget.message.role.isUser
+                                          ? Colors.blue[800]
+                                          : (isDark ? Colors.grey[900] : Colors.grey[200]),
+                                      color: widget.message.role.isUser
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                      fontFamily: 'monospace',
+                                      fontSize: widget.isCompact ? 13 : 14,
+                                    ),
+                                    codeblockDecoration: BoxDecoration(
+                                      color: widget.message.role.isUser
+                                          ? Colors.blue[800]
+                                          : (isDark ? Colors.grey[900] : Colors.grey[200]),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    codeblockPadding: const EdgeInsets.all(12),
+                                    blockquoteDecoration: BoxDecoration(
+                                      border: Border(
+                                        left: BorderSide(
+                                          color: widget.message.role.isUser
+                                              ? Colors.white54
+                                              : Colors.grey,
+                                          width: 4,
+                                        ),
+                                      ),
+                                    ),
+                                    blockquotePadding: const EdgeInsets.only(left: 12),
+                                    h1: TextStyle(
+                                      color: widget.message.role.isUser
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    h2: TextStyle(
+                                      color: widget.message.role.isUser
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    h3: TextStyle(
+                                      color: widget.message.role.isUser
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    listBullet: TextStyle(
+                                      color: widget.message.role.isUser
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                    ),
+                                    a: TextStyle(
+                                      color: widget.message.role.isUser
+                                          ? Colors.lightBlue[100]
+                                          : Colors.blue,
+                                      decoration: TextDecoration.underline,
+                                    ),
                                   ),
                                 ),
                               ),
